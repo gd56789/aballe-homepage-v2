@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#000000">
+  <title>ABALLE</title>
+
+  <style>
+    :root {
+      --black: #000000;
+      --white: #FFFFFF;
+      --font-sans: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      --font-serif: Georgia, 'Times New Roman', Times, serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font-sans);
+      color: var(--white);
+      background-color: var(--black);
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    .nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 24px 40px;
+      mix-blend-mode: difference;
+    }
+
+    .nav__logo {
+      font-size: 1rem;
+      font-weight: 500;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--white);
+      text-decoration: none;
+    }
+
+    .nav__links { display: flex; gap: 40px; }
+
+    .nav__link {
+      font-size: 0.75rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--white);
+      text-decoration: none;
+      opacity: 0.7;
+      transition: opacity 0.3s;
+    }
+
+    .nav__link:hover { opacity: 1; }
+
+    .hero {
+      position: relative;
+      width: 100%;
+      height: 100vh;
+      overflow: hidden;
+      background: #0a0a0a;
+    }
+
+    #canvas-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    #canvas-container canvas { display: block; }
+
+    .click-hint {
+      position: absolute;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      opacity: 0;
+      transition: opacity 0.8s ease;
+      pointer-events: none;
+      z-index: 10;
+      color: rgba(255, 215, 0, 0.5);
+    }
+
+    .click-hint.visible { opacity: 1; }
+
+    .hero__tagline {
+      position: absolute;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: var(--font-serif);
+      font-size: 1rem;
+      font-style: italic;
+      color: var(--white);
+      opacity: 0;
+      transition: opacity 1s ease 2.5s;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .hero__tagline.visible { opacity: 0.6; }
+
+    .hero__scroll {
+      position: absolute;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 1px;
+      height: 50px;
+      background: linear-gradient(to bottom, rgba(255,255,255,0.6), transparent);
+      opacity: 0;
+      transition: opacity 1s ease 3s;
+      z-index: 10;
+    }
+
+    .hero__scroll.visible {
+      opacity: 1;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.3; transform: translateX(-50%) scaleY(0.7); }
+      50% { opacity: 0.8; transform: translateX(-50%) scaleY(1); }
+    }
+
+    .collection {
+      padding: 120px 40px;
+      background: var(--black);
+    }
+
+    .collection__header {
+      text-align: center;
+      margin-bottom: 80px;
+    }
+
+    .collection__label {
+      font-size: 0.75rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      opacity: 0.5;
+      margin-bottom: 16px;
+    }
+
+    .collection__title {
+      font-family: var(--font-serif);
+      font-size: 2.5rem;
+      font-weight: 400;
+    }
+
+    .collection__grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .product {
+      position: relative;
+      aspect-ratio: 3/4;
+      background: #111;
+      overflow: hidden;
+      cursor: pointer;
+    }
+
+    .product__image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: grayscale(100%);
+      transition: transform 0.6s, filter 0.6s;
+    }
+
+    .product:hover .product__image {
+      transform: scale(1.03);
+      filter: grayscale(0%);
+    }
+
+    .product__info {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 24px;
+      background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 0.3s, transform 0.3s;
+    }
+
+    .product:hover .product__info {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .product__name {
+      font-size: 0.875rem;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .product__price {
+      font-size: 0.75rem;
+      opacity: 0.7;
+    }
+
+    .about {
+      padding: 120px 40px;
+      border-top: 1px solid #222;
+    }
+
+    .about__inner {
+      max-width: 900px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: center;
+    }
+
+    .about__text {
+      font-family: var(--font-serif);
+      font-size: 1.25rem;
+      line-height: 1.8;
+      opacity: 0.85;
+    }
+
+    .about__image {
+      aspect-ratio: 1;
+      background: #0a0a0a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .about__image img {
+      max-width: 70%;
+      filter: invert(1);
+      opacity: 0.6;
+    }
+
+    .footer {
+      padding: 40px;
+      border-top: 1px solid #222;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .footer__copy {
+      font-size: 0.6875rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      opacity: 0.4;
+    }
+
+    .footer__links { display: flex; gap: 32px; }
+
+    .footer__link {
+      font-size: 0.6875rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--white);
+      opacity: 0.4;
+      text-decoration: none;
+    }
+
+    .footer__link:hover { opacity: 0.8; }
+
+    @media (max-width: 1024px) {
+      .collection__grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 768px) {
+      .nav { padding: 20px 24px; }
+      .nav__links { gap: 24px; }
+      .collection { padding: 80px 24px; }
+      .collection__grid { grid-template-columns: 1fr; }
+      .about__inner { grid-template-columns: 1fr; gap: 40px; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="nav">
+    <a href="#" class="nav__logo">ABALLE</a>
+    <div class="nav__links">
+      <a href="#collection" class="nav__link">Collection</a>
+      <a href="#about" class="nav__link">About</a>
+      <a href="#" class="nav__link">Contact</a>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div id="canvas-container"></div>
+    <div class="click-hint" id="click-hint">Click to transform</div>
+    <p class="hero__tagline" id="hero-tagline">Future Artifact, Present Possession</p>
+    <div class="hero__scroll" id="hero-scroll"></div>
+  </section>
+
+  <section class="collection" id="collection">
+    <header class="collection__header">
+      <p class="collection__label">The Collection</p>
+      <h2 class="collection__title">Structure & Ornamentation</h2>
+    </header>
+
+    <div class="collection__grid">
+      <article class="product">
+        <img class="product__image" src="https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=600&h=800&fit=crop" alt="Armis I">
+        <div class="product__info">
+          <p class="product__name">Armis I</p>
+          <p class="product__price">$2,400</p>
+        </div>
+      </article>
+      <article class="product">
+        <img class="product__image" src="https://images.unsplash.com/photo-1602173574767-37ac01994b2a?w=600&h=800&fit=crop" alt="Armis II">
+        <div class="product__info">
+          <p class="product__name">Armis II</p>
+          <p class="product__price">$3,200</p>
+        </div>
+      </article>
+      <article class="product">
+        <img class="product__image" src="https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=600&h=800&fit=crop" alt="Fortis">
+        <div class="product__info">
+          <p class="product__name">Fortis</p>
+          <p class="product__price">$4,800</p>
+        </div>
+      </article>
+      <article class="product">
+        <img class="product__image" src="https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=600&h=800&fit=crop" alt="Nexus">
+        <div class="product__info">
+          <p class="product__name">Nexus</p>
+          <p class="product__price">$5,600</p>
+        </div>
+      </article>
+      <article class="product">
+        <img class="product__image" src="https://images.unsplash.com/photo-1603561591411-07134e71a2a9?w=600&h=800&fit=crop" alt="Vertex">
+        <div class="product__info">
+          <p class="product__name">Vertex</p>
+          <p class="product__price">$2,800</p>
+        </div>
+      </article>
+      <article class="product">
+        <img class="product__image" src="https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=600&h=800&fit=crop" alt="Axiom">
+        <div class="product__info">
+          <p class="product__name">Axiom</p>
+          <p class="product__price">$3,400</p>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="about" id="about">
+    <div class="about__inner">
+      <div class="about__text">
+        <p>ABALLE exists at the intersection of architecture and adornment. Each piece is engineered with the precision of a building and worn with the intimacy of jewelry.</p>
+        <br>
+        <p>We don't follow trends. We build artifacts meant to outlast them.</p>
+      </div>
+      <div class="about__image">
+        <img src="https://cdn.shopify.com/s/files/1/0708/9890/9366/files/ABALLE_LOGO_no_tagline_WHITE.png?v=1769385535" alt="ABALLE">
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <span class="footer__copy">&copy; ABALLE</span>
+    <div class="footer__links">
+      <a href="#" class="footer__link">Shipping</a>
+      <a href="#" class="footer__link">Returns</a>
+      <a href="#" class="footer__link">Privacy</a>
+      <a href="#" class="footer__link">Contact</a>
+    </div>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="reveal.js"></script>
+
+</body>
+</html>
