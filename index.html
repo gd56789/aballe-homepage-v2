@@ -79,22 +79,6 @@
 
     #canvas-container canvas { display: block; }
 
-    .click-hint {
-      position: absolute;
-      bottom: 30px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 0.7rem;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      opacity: 0;
-      transition: opacity 0.8s ease;
-      pointer-events: none;
-      z-index: 10;
-      color: rgba(255, 215, 0, 0.5);
-    }
-
-    .click-hint.visible { opacity: 1; }
 
     .hero__tagline {
       position: absolute;
@@ -308,7 +292,7 @@
 
   <section class="hero">
     <div id="canvas-container"></div>
-    <div class="click-hint" id="click-hint">Click to transform</div>
+    <!-- Click hint removed -->
     <p class="hero__tagline" id="hero-tagline">Future Artifact, Present Possession</p>
     <div class="hero__scroll" id="hero-scroll"></div>
   </section>

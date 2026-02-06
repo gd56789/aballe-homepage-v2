@@ -8,7 +8,6 @@
 class AballeRevealArt {
     constructor() {
         this.container = document.getElementById('canvas-container');
-        this.clickHint = document.getElementById('click-hint');
         this.width = window.innerWidth;
         this.height = window.innerHeight;
 
@@ -45,13 +44,13 @@ class AballeRevealArt {
         // Configuration
         this.config = {
             maxLines: 0,                // 0 = no limit, use all paths from SVG
-            repelRadius: 100,
-            repelStrength: 40,
+            repelRadius: 0,             // Disabled: no mouse repel effect
+            repelStrength: 0,           // Disabled: no mouse repel effect
             returnSpeed: 0.04,
             baseColor: new THREE.Color(0xffffff),
             accentColor: new THREE.Color(0xffd700),
             backgroundColor: 0x0a0a0a,
-            pulseEnabled: true,
+            pulseEnabled: false,        // Disabled: no breathing/pulse effect
             pulseSpeed: 0.8,
             pulseAmount: 0.015,
             energyLineCount: 4,
@@ -165,7 +164,10 @@ class AballeRevealArt {
             const availableWidth = this.width - padding * 2;
             const scaleY = availableHeight / svgHeight;
             const scaleX = availableWidth / svgWidth;
-            const scale = Math.min(scaleX, scaleY) * 0.55;
+            // Larger scale on mobile (width < 768px)
+            const isMobile = this.width < 768;
+            const scaleMultiplier = isMobile ? 0.85 : 0.55;
+            const scale = Math.min(scaleX, scaleY) * scaleMultiplier;
 
             artwork.svgPaths = [];
 
@@ -373,10 +375,9 @@ class AballeRevealArt {
             this.lines[i].material.opacity = Math.min(1, t * 1.6) * 0.8;
         }
 
-        // Show click hint when fully revealed
+        // Mark reveal complete (no click hint)
         if (this.autoRevealProgress >= 1) {
             this.autoRevealComplete = true;
-            this.clickHint.classList.add('visible');
         }
     }
 
