@@ -20,8 +20,8 @@ class AballeRevealArt {
         this.autoRevealProgress = 0;
         this.autoRevealComplete = false;
         this.autoRevealTime = 0;
-        this.autoRevealDuration = 2.5;   // seconds to assemble
-        this.autoRevealDelay = 0.3;      // brief pause showing scattered state
+        this.autoRevealDuration = 1.9;   // seconds to assemble (faster)
+        this.autoRevealDelay = 0.1;      // brief pause showing scattered state (faster)
 
         // Artwork swap state
         this.currentArtwork = 'logo';
@@ -30,9 +30,10 @@ class AballeRevealArt {
         this.swapToPositions = [];
 
         // Both artwork datasets (pre-loaded)
+        // rawPaths stores unscaled data, svgPaths stores scaled positions
         this.artworks = {
-            logo: { svgPaths: [], file: 'logo.svg' },
-            vertebra: { svgPaths: [], file: 'vertebra.svg' }
+            logo: { svgPaths: [], rawPaths: [], file: 'logo.svg', svgWidth: 0, svgHeight: 0 },
+            vertebra: { svgPaths: [], rawPaths: [], file: 'vertebra.svg', svgWidth: 0, svgHeight: 0 }
         };
 
         // Scattered positions for initial reveal only
@@ -142,34 +143,25 @@ class AballeRevealArt {
             const response = await fetch(artwork.file);
             const svgText = await response.text();
 
+            // Parse SVG using DOMParser (safer than innerHTML)
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(svgText, 'image/svg+xml');
+            const svg = doc.querySelector('svg');
+
+            // Need to render SVG to get path lengths - create hidden container
             const hiddenDiv = document.createElement('div');
-            hiddenDiv.style.position = 'fixed';
-            hiddenDiv.style.left = '-9999px';
-            hiddenDiv.style.top = '-9999px';
-            hiddenDiv.style.width = '500px';
-            hiddenDiv.style.height = '500px';
-            hiddenDiv.style.opacity = '0';
-            hiddenDiv.style.pointerEvents = 'none';
-            hiddenDiv.innerHTML = svgText;
+            hiddenDiv.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:500px;height:500px;opacity:0;pointer-events:none';
+            hiddenDiv.appendChild(svg.cloneNode(true));
             document.body.appendChild(hiddenDiv);
-            hiddenDiv.offsetHeight;
+            hiddenDiv.offsetHeight; // Force layout
 
-            const svg = hiddenDiv.querySelector('svg');
-            const viewBox = svg.getAttribute('viewBox').split(' ').map(Number);
-            const svgWidth = viewBox[2];
-            const svgHeight = viewBox[3];
+            const renderedSvg = hiddenDiv.querySelector('svg');
+            const viewBox = renderedSvg.getAttribute('viewBox').split(' ').map(Number);
+            artwork.svgWidth = viewBox[2];
+            artwork.svgHeight = viewBox[3];
 
-            const padding = 80;
-            const availableHeight = this.height - padding * 2;
-            const availableWidth = this.width - padding * 2;
-            const scaleY = availableHeight / svgHeight;
-            const scaleX = availableWidth / svgWidth;
-            // Larger scale on mobile (width < 768px)
-            const isMobile = this.width < 768;
-            const scaleMultiplier = isMobile ? 0.85 : 0.55;
-            const scale = Math.min(scaleX, scaleY) * scaleMultiplier;
-
-            artwork.svgPaths = [];
+            // Store RAW unscaled paths (centered around origin)
+            artwork.rawPaths = [];
 
             const sampleElement = (element) => {
                 try {
@@ -180,28 +172,29 @@ class AballeRevealArt {
                     for (let i = 0; i <= numPoints; i++) {
                         const t = i / numPoints;
                         const point = element.getPointAtLength(t * pathLength);
+                        // Store centered but unscaled
                         pathPoints.push({
-                            x: (point.x - svgWidth / 2) * scale,
-                            y: -(point.y - svgHeight / 2) * scale,
+                            x: point.x - artwork.svgWidth / 2,
+                            y: -(point.y - artwork.svgHeight / 2),
                             z: 0
                         });
                     }
-                    artwork.svgPaths.push(pathPoints);
+                    artwork.rawPaths.push(pathPoints);
                 } catch (e) {}
             };
 
-            svg.querySelectorAll('path').forEach(sampleElement);
-            svg.querySelectorAll('polygon').forEach(sampleElement);
-            svg.querySelectorAll('polyline').forEach(sampleElement);
-            svg.querySelectorAll('rect').forEach(sampleElement);
-            svg.querySelectorAll('circle').forEach(sampleElement);
-            svg.querySelectorAll('ellipse').forEach(sampleElement);
-            svg.querySelectorAll('line').forEach(sampleElement);
+            renderedSvg.querySelectorAll('path').forEach(sampleElement);
+            renderedSvg.querySelectorAll('polygon').forEach(sampleElement);
+            renderedSvg.querySelectorAll('polyline').forEach(sampleElement);
+            renderedSvg.querySelectorAll('rect').forEach(sampleElement);
+            renderedSvg.querySelectorAll('circle').forEach(sampleElement);
+            renderedSvg.querySelectorAll('ellipse').forEach(sampleElement);
+            renderedSvg.querySelectorAll('line').forEach(sampleElement);
 
             // Optionally limit to maxLines (0 = no limit, use all paths)
             const maxLines = this.config.maxLines;
-            if (maxLines > 0 && artwork.svgPaths.length > maxLines) {
-                const scored = artwork.svgPaths.map((path, idx) => {
+            if (maxLines > 0 && artwork.rawPaths.length > maxLines) {
+                const scored = artwork.rawPaths.map((path, idx) => {
                     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
                     for (const p of path) {
                         if (p.x < minX) minX = p.x;
@@ -215,13 +208,91 @@ class AballeRevealArt {
                 scored.sort((a, b) => b.size - a.size);
                 const top = scored.slice(0, maxLines);
                 top.sort((a, b) => a.idx - b.idx);
-                artwork.svgPaths = top.map(s => s.path);
+                artwork.rawPaths = top.map(s => s.path);
             }
 
+            // Apply initial scale
+            this.applyScale(artworkKey);
+
             document.body.removeChild(hiddenDiv);
-            console.log(`${artworkKey}: ${artwork.svgPaths.length} shapes (from SVG)`);
+            console.log(`${artworkKey}: ${artwork.rawPaths.length} shapes (from SVG)`);
         } catch (error) {
             console.error(`Could not load ${artwork.file}:`, error);
+        }
+    }
+
+    // Calculate and apply scale for an artwork based on current viewport
+    applyScale(artworkKey) {
+        const artwork = this.artworks[artworkKey];
+        if (!artwork.rawPaths.length) return;
+
+        const isMobile = this.width < 768;
+        let scale;
+
+        if (artworkKey === 'logo') {
+            // LOGO: On mobile, fill width with 10px padding each side
+            // On desktop, use balanced scaling
+            if (isMobile) {
+                const targetWidth = this.width - 20; // 10px padding each side
+                scale = targetWidth / artwork.svgWidth;
+            } else {
+                const padding = 80;
+                const availableWidth = this.width - padding * 2;
+                const availableHeight = this.height - padding * 2;
+                const scaleX = availableWidth / artwork.svgWidth;
+                const scaleY = availableHeight / artwork.svgHeight;
+                scale = Math.min(scaleX, scaleY) * 0.55;
+            }
+        } else {
+            // VERTEBRA: Fit within screen without overflow (use smaller of width/height scale)
+            if (isMobile) {
+                const paddingX = 20; // 10px each side
+                const paddingY = 40; // some vertical breathing room
+                const scaleX = (this.width - paddingX) / artwork.svgWidth;
+                const scaleY = (this.height - paddingY) / artwork.svgHeight;
+                scale = Math.min(scaleX, scaleY);
+            } else {
+                const padding = 80;
+                const availableWidth = this.width - padding * 2;
+                const availableHeight = this.height - padding * 2;
+                const scaleX = availableWidth / artwork.svgWidth;
+                const scaleY = availableHeight / artwork.svgHeight;
+                scale = Math.min(scaleX, scaleY) * 0.55;
+            }
+        }
+
+        // Apply scale to create svgPaths from rawPaths
+        artwork.svgPaths = artwork.rawPaths.map(rawPath =>
+            rawPath.map(p => ({
+                x: p.x * scale,
+                y: p.y * scale,
+                z: p.z
+            }))
+        );
+    }
+
+    // Recalculate all scales (called on resize)
+    recalculateScales() {
+        this.applyScale('logo');
+        this.applyScale('vertebra');
+
+        // Update max line count (shouldn't change, but be safe)
+        this.maxLineCount = Math.max(
+            this.artworks.logo.svgPaths.length,
+            this.artworks.vertebra.svgPaths.length
+        );
+
+        // Update current artwork targets
+        this.setArtworkTargets(this.currentArtwork);
+
+        // If not currently swapping, snap to new positions
+        if (!this.isSwapping && this.autoRevealComplete) {
+            for (let i = 0; i < this.maxLineCount; i++) {
+                for (let j = 0; j < this.maxPointsPerLine; j++) {
+                    this.currentPositions[i][j].copy(this.originalPositions[i][j]);
+                }
+                this.updateLineGeometry(i);
+            }
         }
     }
 
@@ -901,6 +972,9 @@ class AballeRevealArt {
         this.camera.aspect = this.width / this.height;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(this.width, this.height);
+
+        // Recalculate artwork scales for new viewport
+        this.recalculateScales();
     }
 
     // ---- Physics ----
