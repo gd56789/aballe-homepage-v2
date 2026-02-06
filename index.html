@@ -61,6 +61,41 @@
 
     .nav__link:hover { opacity: 1; }
 
+    /* Hamburger menu button */
+    .nav__toggle {
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      gap: 5px;
+      width: 24px;
+      height: 24px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      z-index: 101;
+    }
+
+    .nav__toggle span {
+      display: block;
+      width: 100%;
+      height: 2px;
+      background: var(--white);
+      transition: transform 0.3s, opacity 0.3s;
+    }
+
+    .nav__toggle.open span:nth-child(1) {
+      transform: translateY(7px) rotate(45deg);
+    }
+
+    .nav__toggle.open span:nth-child(2) {
+      opacity: 0;
+    }
+
+    .nav__toggle.open span:nth-child(3) {
+      transform: translateY(-7px) rotate(-45deg);
+    }
+
     .hero {
       position: relative;
       width: 100%;
@@ -272,7 +307,35 @@
 
     @media (max-width: 768px) {
       .nav { padding: 20px 24px; }
-      .nav__links { gap: 24px; }
+
+      .nav__toggle { display: flex; }
+
+      .nav__links {
+        position: fixed;
+        top: 0;
+        right: 0;
+        width: 100%;
+        height: 100vh;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 32px;
+        background: rgba(0, 0, 0, 0.95);
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.3s, visibility 0.3s;
+      }
+
+      .nav__links.open {
+        opacity: 1;
+        visibility: visible;
+      }
+
+      .nav__link {
+        font-size: 1.25rem;
+        opacity: 1;
+      }
+
       .collection { padding: 80px 24px; }
       .collection__grid { grid-template-columns: 1fr; }
       .about__inner { grid-template-columns: 1fr; gap: 40px; }
@@ -283,7 +346,12 @@
 
   <nav class="nav">
     <a href="#" class="nav__logo">ABALLE</a>
-    <div class="nav__links">
+    <button class="nav__toggle" id="nav-toggle" aria-label="Menu">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+    <div class="nav__links" id="nav-links">
       <a href="#collection" class="nav__link">Collection</a>
       <a href="#about" class="nav__link">About</a>
       <a href="#" class="nav__link">Contact</a>
@@ -374,6 +442,24 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="reveal.js"></script>
+  <script>
+    // Mobile menu toggle
+    const navToggle = document.getElementById('nav-toggle');
+    const navLinks = document.getElementById('nav-links');
+
+    navToggle.addEventListener('click', () => {
+      navToggle.classList.toggle('open');
+      navLinks.classList.toggle('open');
+    });
+
+    // Close menu when a link is clicked
+    navLinks.querySelectorAll('.nav__link').forEach(link => {
+      link.addEventListener('click', () => {
+        navToggle.classList.remove('open');
+        navLinks.classList.remove('open');
+      });
+    });
+  </script>
 
 </body>
 </html>
