@@ -44,13 +44,13 @@ class AballeRevealArt {
         // Configuration
         this.config = {
             maxLines: 0,                // 0 = no limit, use all paths from SVG
-            repelRadius: 0,             // Disabled: no mouse repel effect
-            repelStrength: 0,           // Disabled: no mouse repel effect
+            repelRadius: 100,           // Mouse repel effect radius
+            repelStrength: 40,          // Mouse repel effect strength
             returnSpeed: 0.04,
             baseColor: new THREE.Color(0xffffff),
             accentColor: new THREE.Color(0xffd700),
             backgroundColor: 0x0a0a0a,
-            pulseEnabled: false,        // Disabled: no breathing/pulse effect
+            pulseEnabled: true,         // Subtle breathing effect
             pulseSpeed: 0.8,
             pulseAmount: 0.015,
             energyLineCount: 4,
